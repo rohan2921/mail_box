@@ -28,11 +28,7 @@ target_metadata = db_tables.SQLModel.metadata
 # Set the sqlalchemy.url value to the database URL from the environment
 from mail_box.db_helpers import DATABASE_URL  # noqa
 
-# config.set_main_option("sqlalchemy.url", DATABASE_URL)
-
-config.set_main_option(
-    "sqlalchemy.url", "postgresql://scp:scp@172.18.0.2:5432/mail_box"
-)
+config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
 
 def run_migrations_offline() -> None:

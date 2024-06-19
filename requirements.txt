@@ -1,4 +1,10 @@
 sqlmodel==0.0.19
 alembic==1.13.1
+google-api-core==2.19.0
 google-api-python-client==2.133.0
+google-auth==2.30.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.0
+googleapis-common-protos==1.63.1
 psycopg2-binary==2.9.9
+ipython==8.25.0
