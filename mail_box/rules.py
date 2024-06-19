@@ -18,6 +18,13 @@ class RuleBase(ABC):
         assert cls not in RuleBase.__rule_types, "Duplicate Downloader strategy"
         RuleBase.__rule_types[cls.type] = cls
 
+    @property
+    def model_field(self):
+        return getattr(MailMessage, self.field_name)
+
+    def fail(self, msg="Error occurred"):
+        raise ValueError(msg)
+
     @staticmethod
     def get_rule(key: str) -> Type["RuleBase"]:
         if key not in RuleBase.__rule_types:
@@ -34,16 +41,17 @@ class StringRules(RuleBase):
     type = "str"
 
     def filter(self):
-        field = getattr(MailMessage, self.field_name)
-        if self.predicate.strip() == "equals":
-            return field == self.value
-        elif self.predicate.strip() == "not equals":
-            return field != self.value
-        elif self.predicate.strip().lower() == "contains":
-            return field.contains(self.value)
-        elif self.predicate.strip() == "does not contain":
-            return ~field.contains(self.value)
-        raise ValueError(f"This predicate is not supported: {self.predicate}")
+        match self.predicate.strip().lower():
+            case "equals":
+                return self.model_field == self.value
+            case "not equals":
+                return self.model_field != self.value
+            case "contains":
+                return self.model_field.contains(self.value)
+            case "does not contain":
+                return ~self.model_field.contains(self.value)
+
+        self.fail(f"This predicate is not supported: {self.predicate}")
 
 
 @dataclass
@@ -51,10 +59,12 @@ class IntegerRules(RuleBase):
     type = "int"
 
     def filter(self):
-        field = getattr(MailMessage, self.field_name)
         _datetime = datetime.datetime.now() - datetime.timedelta(days=self.value)
-        if self.predicate.strip() == "greater than":
-            return field > _datetime
-        elif self.predicate.strip() == "less than":
-            return field < _datetime
-        raise ValueError(f"This predicate is not supported: {self.predicate}")
+
+        match self.predicate.strip().lower():
+            case "greater than":
+                return self.model_field > _datetime
+            case "less than":
+                return self.model_field < _datetime
+
+        self.fail(f"This predicate is not supported: {self.predicate}")

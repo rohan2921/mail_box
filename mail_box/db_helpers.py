@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from alembic import command
 from alembic.config import Config
 from sqlmodel import create_engine
@@ -14,8 +16,9 @@ engine = create_engine(DATABASE_URL)
 
 def run_migrations():
     """
-    Make sure environment variables are for database url before running migrations
+    Make sure environment variables are available for database url before running migrations
     :return:
     """
-    alembic_cfg = Config("alembic.ini")
+    file_path = Path(__file__).resolve().parent / "alembic.ini"
+    alembic_cfg = Config(file_path)
     command.upgrade(alembic_cfg, "head")

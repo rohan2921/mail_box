@@ -1,3 +1,4 @@
+import logging
 from contextlib import suppress
 from functools import partial
 from typing import Dict, List, Tuple
@@ -8,6 +9,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
 from mail_box.types import MessageAction
+
+logger = logging.getLogger(__name__)
 
 
 class GmailAPIHandler:
@@ -38,6 +41,7 @@ class GmailAPIHandler:
 
         :return: google.oauth2.credentials.Credentials: The OAuth 2.0 credentials for the user.
         """
+
         creds = None
         with suppress(FileNotFoundError):
             creds = Credentials.from_authorized_user_file(
@@ -53,8 +57,9 @@ class GmailAPIHandler:
                         self.credentials_file, scopes=self.SCOPES
                     )
                     creds = flow.run_local_server(port=0)
-                except ValueError:
-                    print("Invalid file format")
+                except (ValueError, FileNotFoundError) as e:
+                    logger.exception("Invalid file format or file not found")
+                    raise e
             # Saving the credentials for the next run
             with open("existing_token.json", "w") as token:
                 token.write(creds.to_json())

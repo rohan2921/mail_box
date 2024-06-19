@@ -17,19 +17,27 @@ class MailMessage(SQLModel, table=True):
     __tablename__ = "mail_message"
 
 
-def create_mail_messages(mail_infos):
+def create_mail_messages(mail_infos: list[dict]):
+    """
+    This function parses the mail content data and stores it into the database
+    :param mail_infos: Mail contents  that are received from the get_mail_content of GmailAPIHandler
+    :return: None
+    """
     objs = [
         MailMessage(
             mail_id=mail["id"],
-            from_email=mail_headers["From"],
-            to_email=mail_headers["To"],
-            timestamp=parsedate_to_datetime(mail_headers["Date"]),
+            from_email=mail_headers["from"],
+            to_email=mail_headers["to"],
+            timestamp=parsedate_to_datetime(mail_headers["date"]),
             message=mail["snippet"],
-            subject=mail_headers.get("Subject", ""),
+            subject=mail_headers.get("subject", ""),
         )
         for mail in mail_infos
         for mail_headers in [
-            {header["name"]: header["value"] for header in mail["payload"]["headers"]}
+            {
+                header["name"].lower(): header["value"]
+                for header in mail["payload"]["headers"]
+            }
         ]
     ]
     with Session(engine) as session:
@@ -38,6 +46,11 @@ def create_mail_messages(mail_infos):
 
 
 def filter_mail_messages(filters):
+    """
+    Passing the given filter to query executer and returns the result
+    :param filters: filters prepared from the BaseRule classes
+    :return: List of MailMessages
+    """
     query = select(MailMessage).where(filters)
     with Session(engine) as session:
         return session.exec(query).all()
