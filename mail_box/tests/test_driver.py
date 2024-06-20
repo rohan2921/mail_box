@@ -1,7 +1,9 @@
+import json
+import os
 import unittest
 from unittest.mock import patch
 
-from mail_box.driver import download_mails_and_store
+from mail_box.driver import apply_rules, download_mails_and_store
 
 
 class DownloadMailsAndStoreUnitTest(unittest.TestCase):
@@ -91,22 +93,62 @@ class DownloadMailsAndStoreUnitTest(unittest.TestCase):
         mock_create_mail_messages.assert_not_called()  # Since failed during handler initialization
 
 
-#
-# class ApplyRulesUnitTest(unittest.TestCase):
-#     def test_file_not_exists(self):
-#         pass
-#
-#     def test_invalid_file(self):
-#         pass
-#
-#     def test_str_rule(self):
-#         pass
-#
-#     def test_int_rule(self):
-#         pass
-#
-#     def test_any_predicate(self):
-#         pass
-#
-#     def test_all_predicate(self):
-#         pass
+class ApplyRulesUnitTest(unittest.TestCase):
+    def setUp(self):
+        self.test_dir = "test_files"
+        os.makedirs(self.test_dir, exist_ok=True)
+        self.valid_content = {
+            "predicate": "any",
+            "rules": [
+                {"field_name": "subject", "predicate": "contains", "value": "Test"},
+                {"field_name": "days", "predicate": "greater than", "value": 5},
+            ],
+        }
+
+    def tearDown(self):
+        for filename in os.listdir(self.test_dir):
+            file_path = os.path.join(self.test_dir, filename)
+            os.unlink(file_path)
+        os.rmdir(self.test_dir)
+
+    def create_test_file(self, filename, content):
+        file_path = os.path.join(self.test_dir, filename)
+        with open(file_path, "w") as f:
+            f.write(json.dumps(content))
+        return file_path
+
+    @patch("mail_box.db_tables.filter_mail_messages")
+    def test_file_not_exists(self, mock_filter_mail_messages):
+        with self.assertRaises(FileNotFoundError):
+            apply_rules("non_existent_file.json")
+        mock_filter_mail_messages.assert_not_called()
+
+    @patch("mail_box.db_tables.filter_mail_messages")
+    @patch("mail_box.rules.RuleBase.get_rule")
+    def test_any_predicate(self, mock_get_rule, mock_filter_mail_messages):
+        mock_filter_mail_messages.return_value = []
+        mock_rule = unittest.mock.MagicMock()
+        mock_rule.filter.side_effect = ["filter_1", "filter_2"]
+        mock_get_rule.return_value = mock_rule
+
+        file_path = self.create_test_file("any_rule.json", self.valid_content)
+        with patch("mail_box.driver.operator.or_") as mock_operator_or:
+            mock_operator_or.return_value = "combined_filter"
+            apply_rules(file_path)
+            mock_operator_or.assert_called()
+        mock_filter_mail_messages.assert_called_with("combined_filter")
+
+    @patch("mail_box.db_tables.filter_mail_messages")
+    @patch("mail_box.rules.RuleBase.get_rule")
+    def test_all_predicate(self, mock_get_rule, mock_filter_mail_messages):
+        mock_filter_mail_messages.return_value = []
+        mock_rule = unittest.mock.MagicMock()
+        mock_rule.filter.side_effect = ["filter_1", "filter_2"]
+        mock_get_rule.return_value = mock_rule
+
+        file_path = self.create_test_file("all_rule.json", self.valid_content)
+        with patch("mail_box.driver.operator.and_") as mock_operator_and:
+            mock_operator_and.return_value = "combined_filter"
+            apply_rules(file_path)
+            mock_operator_and.assert_called()
+        mock_filter_mail_messages.assert_called_with("combined_filter")

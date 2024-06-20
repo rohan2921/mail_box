@@ -27,7 +27,9 @@ def create_mail_messages(mail_infos: list[dict]):
         MailMessage(
             mail_id=mail["id"],
             from_email=mail_headers["from"],
-            to_email=mail_headers["to"],
+            to_email=mail_headers["to"]
+            if "to" in mail_headers
+            else mail_headers["delivered-to"],
             timestamp=parsedate_to_datetime(mail_headers["date"]),
             message=mail["snippet"],
             subject=mail_headers.get("subject", ""),
